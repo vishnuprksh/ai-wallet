@@ -6,6 +6,8 @@ import os
 import pandas as pd
 from io import StringIO
 
+os.environ["OPENAI_API_KEY"] == st.secrets["OPENAI_API_KEY"]
+
 # Load environment variables from .env file
 load_dotenv()
 
