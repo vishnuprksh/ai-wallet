@@ -1,6 +1,4 @@
-openai
-load_dotenv
-streamlit
-os
-pandas
-io
+openai==1.33.0
+pandas==2.2.2
+python-dotenv==1.0.1
+streamlit==1.35.0
