@@ -1,16 +1,19 @@
 import streamlit as st
 from openai import OpenAI
+from dotenv import load_dotenv
 import os
 import pandas as pd
 from io import StringIO
+import sqlite3
 
-# Initialize OpenAI client
+# Load environment variables from .secrets file
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
 
 def generate_response(prompt):
     content = "You are an expense tracker. \
             Take text form of bank statements and convert those into sql format. \
-            The headers for the csv after convertion should be Date, Description, Debit, Credit, Balance After and Category. \
+            The headers for the csv after conversion should be Date, Description, Debit, Credit, Balance After and Category. \
             Assign appropriate category for each expense. \
             Format for date is yyyy-mm-dd. \
             Should simplify the description for readability."
@@ -23,6 +26,27 @@ def generate_response(prompt):
         ]
     )
     return completion
+
+def create_database():
+    conn = sqlite3.connect('expenses.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS balance_sheet (
+            Date TEXT,
+            Description TEXT,
+            Debit REAL,
+            Credit REAL,
+            Balance_After REAL,
+            Category TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def insert_data(df):
+    conn = sqlite3.connect('expenses.db')
+    df.to_sql('balance_sheet', conn, if_exists='append', index=False)
+    conn.close()
 
 # Set the title of the web app
 st.title('AI Wallet')
@@ -41,16 +65,11 @@ if st.button('Submit'):
     df = pd.read_csv(data, encoding="utf-8")
     st.table(df.head())
 
-    # Add button to append to balance_sheet.csv
+    # Add button to insert data into the SQL database
     if st.button('Add to Record'):
-        # Check if balance_sheet.csv exists
-        if os.path.exists('balance_sheet.csv'):
-            existing_df = pd.read_csv('balance_sheet.csv')
-            updated_df = pd.concat([existing_df, df], ignore_index=True)
-        else:
-            updated_df = df
-
-        # Save the updated DataFrame back to balance_sheet.csv
-        updated_df.to_csv('balance_sheet.csv', index=False)
-        st.success('Record added to balance_sheet.csv')
-
+        # Create the database and table if it doesn't exist
+        create_database()
+        
+        # Insert the new data
+        insert_data(df)
+        st.success('Record added to the SQL database')
